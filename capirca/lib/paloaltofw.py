@@ -128,20 +128,10 @@ class Service(object):
   """Generate PacketFilter policy terms."""
   service_map = {}
 
-  def __init__(self, src_ports, dst_ports, service_name,
-               protocol):  # ports is a tuple of ports
-    if (src_ports, dst_ports, protocol) in self.service_map:
-      raise PaloAltoFWDuplicateServiceError(
-          ("You have a duplicate service. "
-           "A service already exists on port(s): %s")
-          % str(f'src: {src_ports}, dst: {dst_ports}, protocol: {protocol}'))
-
-    for unused_k, v in Service.service_map.items():
-      if v["name"] == service_name:
-        raise PaloAltoFWDuplicateServiceError(
-            "You have a duplicate service. A service named %s already exists." %
-            str(service_name))
-
+  def __init__(self, src_ports, dst_ports, protocol):
+    src_service_name = 'ANY' if not src_ports or '0-65535' in str(src_ports) else "_".join(src_ports)
+    dst_service_name = 'ANY' if not dst_ports or '0-65535' in str(dst_ports) else "_".join(dst_ports)
+    service_name = f'SVC_{src_service_name}_TO_{dst_service_name}_{protocol.upper()}'
     if len(service_name) > 63:
       raise PaloAltoFWTooLongName("Service name must be 63 characters max: %s" %
                                   str(service_name))
@@ -180,8 +170,7 @@ class Rule(object):
       saddr_check = sorted(saddr_check)
       for addr in saddr_check:
         self.options["source"].append(str(addr))
-    else:
-      self.options["source"].append("any")
+
     # DESTINATION-ADDRESS
     if term.destination_address:
       daddr_check = set()
@@ -190,8 +179,6 @@ class Rule(object):
       daddr_check = sorted(daddr_check)
       for addr in daddr_check:
         self.options["destination"].append(str(addr))
-    else:
-      self.options["destination"].append("any")
 
     if term.action:
       self.options["action"] = term.action[0]
@@ -200,55 +187,31 @@ class Rule(object):
       for pan_app in term.pan_application:
         self.options["application"].append(pan_app)
 
+    src_ports = []
     if term.source_port:
-      src_ports = []
       for tup in term.source_port:
         if len(tup) > 1 and tup[0] != tup[1]:
           src_ports.append(str(tup[0]) + "-" + str(tup[1]))
         else:
           src_ports.append(str(tup[0]))
-      src_ports = tuple(src_ports)
 
-      if '0-65535' in str(src_ports):
-        src_service_name = 'ANY'
-      else:
-        src_service_name = "_".join(src_ports)
-
-    else:
-      src_service_name = 'ANY'
-      src_ports = ('0-65535',)
-
+    dst_ports = []
     if term.destination_port:
-      dst_ports = []
       for tup in term.destination_port:
         if len(tup) > 1 and tup[0] != tup[1]:
           dst_ports.append(str(tup[0]) + "-" + str(tup[1]))
         else:
           dst_ports.append(str(tup[0]))
+
+    if src_ports or dst_ports:
+      # convert to tuple so that they are usable as dict keys
+      src_ports = tuple(src_ports)
       dst_ports = tuple(dst_ports)
-
-      if '0-65535' in str(dst_ports):
-        dst_service_name = 'ANY'
-      else:
-        dst_service_name = "_".join(dst_ports)
-
-    else:
-      dst_service_name = 'ANY'
-      dst_ports = ('0-65535',)
-
-    if not (src_service_name or src_ports):
-      raise Exception('There should always be a source port')
-    if not (dst_service_name, dst_ports):
-      raise Exception('There should always be a destination port')
-
-    for prot in term.protocol:
-      ports = (src_ports, dst_ports, prot)
-
-      if ports not in Service.service_map:
-        rule_service_name = f'SVC_{src_service_name}_TO_{dst_service_name}_{prot.upper()}'
-        Service(src_ports, dst_ports, rule_service_name, prot)
-
-      self.options["service"].append(Service.service_map[ports]["name"])
+      for prot in term.protocol:
+        ports = (src_ports, dst_ports, prot)
+        if ports not in Service.service_map:
+          Service(src_ports, dst_ports, prot)
+        self.options["service"].append(Service.service_map[ports]["name"])
 
     if term.protocol:
       if term.protocol[0] == "icmp":
@@ -415,6 +378,7 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
             "icmp-type": normalized_icmptype,
             "timeout": term.timeout
         })
+
       self.pafw_policies.append((header, new_terms, filter_options))
       # create Palo Alto Firewall Rule object
       for term in new_terms:
@@ -516,6 +480,7 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
       # sort address books and address sets
       address_book_groups_dict = collections.OrderedDict(
           sorted(address_book_groups_dict.items()))
+
     address_book_keys = sorted(
         list(address_book_names_dict.keys()), key=self._SortAddressBookNumCheck)
 
@@ -553,19 +518,10 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
       service.append(self.INDENT * 6 + '<entry name="' + v["name"] + '">')
       service.append(self.INDENT * 7 + "<protocol>")
       service.append(self.INDENT * 8 + "<" + k[2] + ">") # protocol
-
-      # source-port
-      src_port_tup = str(k[0])[1:-1]
-      if src_port_tup[-1] == ",":
-        src_port_tup = src_port_tup[:-1]
-      service.append(self.INDENT * 9 + "<source-port>" + src_port_tup.replace("'", "") + "</source-port>")
-
-      # destination-port
-      dst_port_tup = str(k[1])[1:-1]
-      if dst_port_tup[-1] == ",":
-        dst_port_tup = dst_port_tup[:-1]
-      service.append(self.INDENT * 9 + "<port>" + dst_port_tup.replace("'", "") + "</port>")
-
+      if k[0]:
+        service.append(self.INDENT * 9 + "<source-port>" + ','.join(k[0]) + "</source-port>")
+      if k[1]:
+        service.append(self.INDENT * 9 + "<port>" + ','.join(k[1]) + "</port>")
       service.append(self.INDENT * 8 + "</" + k[2] + ">")
       service.append(self.INDENT * 7 + "</protocol>")
       service.append(self.INDENT * 6 + "</entry>")
