@@ -170,6 +170,8 @@ class Rule(object):
       saddr_check = sorted(saddr_check)
       for addr in saddr_check:
         self.options["source"].append(str(addr))
+    else:
+      self.options["source"].append("any")
 
     # DESTINATION-ADDRESS
     if term.destination_address:
@@ -179,6 +181,8 @@ class Rule(object):
       daddr_check = sorted(daddr_check)
       for addr in daddr_check:
         self.options["destination"].append(str(addr))
+    else:
+      self.options["destination"].append("any")
 
     if term.action:
       self.options["action"] = term.action[0]
@@ -210,6 +214,7 @@ class Rule(object):
       for prot in term.protocol:
         ports = (src_ports, dst_ports, prot)
         if ports not in Service.service_map:
+          # create service
           Service(src_ports, dst_ports, prot)
         self.options["service"].append(Service.service_map[ports]["name"])
 
@@ -514,15 +519,15 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
     service.append(self.INDENT * 5 + "<!-- Services -->")
 
     service.append(self.INDENT * 5 + "<service>")
-    for k, v in Service.service_map.items():
-      service.append(self.INDENT * 6 + '<entry name="' + v["name"] + '">')
+    for (src_ports, dst_ports, protocol), service_dict in Service.service_map.items():
+      service.append(self.INDENT * 6 + '<entry name="' + service_dict["name"] + '">')
       service.append(self.INDENT * 7 + "<protocol>")
-      service.append(self.INDENT * 8 + "<" + k[2] + ">") # protocol
-      if k[0]:
-        service.append(self.INDENT * 9 + "<source-port>" + ','.join(k[0]) + "</source-port>")
-      if k[1]:
-        service.append(self.INDENT * 9 + "<port>" + ','.join(k[1]) + "</port>")
-      service.append(self.INDENT * 8 + "</" + k[2] + ">")
+      service.append(self.INDENT * 8 + "<" + protocol + ">")
+      if src_ports:
+        service.append(self.INDENT * 9 + "<source-port>" + ','.join(src_ports) + "</source-port>")
+      if dst_ports:
+        service.append(self.INDENT * 9 + "<port>" + ','.join(dst_ports) + "</port>")
+      service.append(self.INDENT * 8 + "</" + protocol + ">")
       service.append(self.INDENT * 7 + "</protocol>")
       service.append(self.INDENT * 6 + "</entry>")
     service.append(self.INDENT * 5 + "</service>")
