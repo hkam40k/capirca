@@ -205,6 +205,7 @@ class Rule(object):
     self.options["destination"] = []
     self.options["application"] = []
     self.options["log_setting"] = []
+    self.options["security_profile_group"] = []
     self.options["service"] = []
     self.options["logging"] = []
 
@@ -281,6 +282,11 @@ class Rule(object):
       if len(term.pan_log_setting) > 1:
         raise PaloAltoFWOptionError("Only one log-setting allowed")
       self.options["log_setting"].append(term.pan_log_setting[0])
+
+    if term.pan_security_profile_group:
+      if len(term.pan_security_profile_group) > 1:
+        raise PaloAltoFWOptionError("Only one security profile group allowed")
+      self.options["security_profile_group"].append(term.pan_security_profile_group[0])
 
     if term.source_port or term.destination_port:
       src_ports = pan_ports(term.source_port)
@@ -396,6 +402,7 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
         "pan_destination_edl",
         "pan_source_edl",
         "pan_log_setting",
+        "pan_security_profile_group",
         "translated"
     }
 
@@ -994,6 +1001,14 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
         else:
           for x in options["application"]:
             member = etree.SubElement(app, "member")
+            member.text = x
+
+        # SECURITY PROFILE GROUP
+        if options["security_profile_group"]:
+          profile_setting = etree.SubElement(entry, "profile-setting")
+          profile_setting_group = etree.SubElement(profile_setting, "group")
+          for x in options["security_profile_group"]:
+            member = etree.SubElement(profile_setting_group, "member")
             member.text = x
 
         if tag_name is not None:
