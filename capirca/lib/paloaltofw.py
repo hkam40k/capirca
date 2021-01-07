@@ -402,6 +402,11 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
           term.destination_address = nacaddr.RemoveAddressFromList(
               term.destination_address, i)
 
+        if len(term.source_address) > 1:
+          term.source_address = nacaddr.CollapseAddrList(term.source_address)
+        if len(term.destination_address) > 1:
+          term.destination_address = nacaddr.CollapseAddrList(term.destination_address)
+
         for addr in term.source_address:
           self._BuildAddressBook(self.from_zone, addr)
         for addr in term.destination_address:
