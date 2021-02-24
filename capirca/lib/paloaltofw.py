@@ -21,6 +21,16 @@ from capirca.lib import aclgenerator
 from capirca.lib import nacaddr
 
 
+def make_chunks(data, chunk_size):
+    while data:
+        chunk, data = data[:chunk_size], data[chunk_size:]
+        yield chunk
+
+
+# must be parameterized from policy file header
+MAX_ADDRESS_PER_GROUP = 2500
+
+
 class Error(Exception):
   """generic error class."""
 
@@ -524,6 +534,21 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
 
     address_entries.append(self.INDENT * 5 + "</address>")
 
+    split_address_groups = collections.defaultdict(dict)
+
+    for group, address_list in address_book_groups_dict.items():
+      if len(address_list) <= MAX_ADDRESS_PER_GROUP:
+        continue
+      for group_n, chunk in enumerate(make_chunks(address_list, MAX_ADDRESS_PER_GROUP)):
+          split_address_groups[group][f'{group}__{group_n}'] = chunk
+
+    # replace original address-groups, which contained too many addresses,
+    # with multiple smaller address-groups
+    for group, split_groups in split_address_groups.items():
+      del address_book_groups_dict[group]
+      for split_group_name, address_list in split_groups.items():
+        address_book_groups_dict[split_group_name] = address_list
+
     address_group_entries = []
     address_group_entries.append(self.INDENT * 5 + "<!-- Address groups-->")
     address_group_entries.append(self.INDENT * 5 + "<address-group>")
@@ -567,6 +592,14 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
     rules.append(self.INDENT * 7 + "<rules>")
 
     for name, options in Rule.rules.items():
+      for address_group_name in split_address_groups.keys():
+        if address_group_name in options["source"]:
+          options["source"].remove(address_group_name)
+          options["source"].extend(split_address_groups[address_group_name])
+        if address_group_name in options["destination"]:
+          options["destination"].remove(address_group_name)
+          options["destination"].extend(split_address_groups[address_group_name])
+
       rules.append(self.INDENT * 8 + '<entry name="' + name + '">')
 
       rules.append(self.INDENT * 9 + "<to>")
