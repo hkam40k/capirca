@@ -64,6 +64,8 @@ term good-term-4 {
   protocol:: tcp
   pan-application:: ssl http
   pan-security-profile-group:: url-filtering
+  pan-source-edl:: edl-name-1
+  pan-destination-edl:: edl-name-2
   action:: accept
 }
 """
@@ -165,6 +167,8 @@ SUPPORTED_TOKENS = {
     'timeout',
     'pan_application',
     'pan_security_profile_group',
+    'pan_destination_edl',
+    'pan_source_edl',
     'translated'
 }
 
