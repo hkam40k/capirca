@@ -182,7 +182,12 @@ class Rule(object):
       saddr_check = sorted(saddr_check)
       for addr in saddr_check:
         self.options["source"].append(str(addr))
-    else:
+
+    if term.pan_source_edl:
+      for edl_name in term.pan_source_edl:
+        self.options["source"].append(edl_name)
+
+    if not self.options["source"]:
       self.options["source"].append("any")
 
     # DESTINATION-ADDRESS
@@ -193,7 +198,12 @@ class Rule(object):
       daddr_check = sorted(daddr_check)
       for addr in daddr_check:
         self.options["destination"].append(str(addr))
-    else:
+
+    if term.pan_destination_edl:
+      for edl_name in term.pan_destination_edl:
+        self.options["destination"].append(edl_name)
+
+    if not self.options["destination"]:
       self.options["destination"].append("any")
 
     if term.action:
@@ -283,6 +293,8 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
         "stateless_reply",
         "timeout",
         "pan_application",
+        "pan_destination_edl",
+        "pan_source_edl",
         "translated"
     }
 
