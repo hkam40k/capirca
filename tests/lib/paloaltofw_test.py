@@ -267,6 +267,16 @@ term test-local-log {
 }
 """
 
+PAN_EDL_TERM_1 = """
+term pan-edl-term-1 {
+  destination-address:: SOME_HOST
+  protocol:: tcp
+  pan-source-edl:: edl-name-1
+  pan-destination-edl:: edl-name-2
+  action:: accept
+}
+"""
+
 ACTION_ACCEPT_TERM = """
 term test-accept-action {
   comment:: "Testing accept action for tcp."
@@ -377,7 +387,9 @@ SUPPORTED_TOKENS = frozenset({
     'stateless_reply',
     'timeout',
     'pan_application',
-    'translated',
+    'pan_destination_edl',
+    'pan_source_edl',
+    'translated'
 })
 
 SUPPORTED_SUB_TOKENS = {
@@ -619,6 +631,22 @@ class PaloAltoFWTest(unittest.TestCase):
       x = paloalto.config.findall(PATH_RULES + '/entry[@name]/log-end')
       self.assertEqual(len(x), 1, output)
       self.assertEqual(x[0].text, 'yes', output)
+
+  def testPanEdl(self):
+    definitions = naming.Naming()
+    definitions._ParseLine('SOME_HOST = 10.0.0.0/8', 'networks')
+    pol = policy.ParsePolicy(GOOD_HEADER_1 + PAN_EDL_TERM_1, definitions)
+    paloalto = paloaltofw.PaloAltoFW(pol, EXP_INFO)
+    output = str(paloalto)
+    x = paloalto.config.findtext(PATH_RULES +
+                                 "/entry[@name='pan-edl-term-1']/source/member")
+    self.assertEqual(x, 'edl-name-1', output)
+    y = paloalto.config.findtext(PATH_RULES +
+                                 "/entry[@name='pan-edl-term-1']/destination/member")
+    self.assertEqual(y, 'SOME_HOST', output)
+    z = paloalto.config.findtext(PATH_RULES +
+                                 "/entry[@name='pan-edl-term-1']/destination/member[2]")
+    self.assertEqual(z, 'edl-name-2', output)
 
   def testAcceptAction(self):
     pol = policy.ParsePolicy(GOOD_HEADER_1 + ACTION_ACCEPT_TERM, self.naming)
