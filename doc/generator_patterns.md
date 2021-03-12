@@ -1,9 +1,5 @@
 # Common Patterns For Generators
 
-<!--* # copybara:strip_begin(internal linter)
-# LINT.IfChange
-# copybara:strip_end *-->
-
 ## Objective
 
 The purpose of this document is to describe common patterns for new Capirca
@@ -360,8 +356,16 @@ span of the vendor syntax, not just a single keyword.
 
 All custom exceptions types added must be unit tested.
 
-<!--* # copybara:strip_begin(internal linter)
-# LINT.ThenChange(
-#     //depot/google3/ops/security/miracl/g3doc/capirca_generator_patterns.md
-# )
-# copybara:strip_end *-->
+### Test Methods
+
+#### Running end-to-end Capirca tests
+
+Create a test .pol file.
+
+Build and run the ACL generator binary with the desired base and output directory.
+The following command simply outputs to the current directory.
+
+```shell
+$ ./capirca/aclgen --base_directory ./
+--output_directory ./ --recursive --optimize --definitions_directory capirca/def --logtostderr --policy_file path/to/test.pol
+```

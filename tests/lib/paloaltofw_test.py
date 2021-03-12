@@ -85,6 +85,33 @@ term good-term-stateless-reply {
 }
 """
 
+TCP_ESTABLISHED_TERM = """
+term tcp-established {
+  destination-address:: SOME_HOST
+  protocol:: tcp
+  option:: tcp-established
+  action:: accept
+}
+"""
+
+UDP_ESTABLISHED_TERM = """
+term udp-established-term {
+  destination-address:: SOME_HOST
+  protocol:: udp
+  option:: established
+  action:: accept
+}
+"""
+
+UNSUPPORTED_OPTION_TERM = """
+term unsupported-option-term {
+  destination-address:: SOME_HOST
+  protocol:: udp
+  option:: inactive
+  action:: accept
+}
+"""
+
 EXPIRED_TERM_1 = """
 term expired_test {
   expiration:: 2000-1-1
@@ -149,7 +176,7 @@ term timeout-term {
 }
 """
 
-SUPPORTED_TOKENS = {
+SUPPORTED_TOKENS = frozenset({
     'action',
     'comment',
     'destination_address',
@@ -158,6 +185,7 @@ SUPPORTED_TOKENS = {
     'icmp_type',
     'logging',
     'name',
+    'option',
     'owner',
     'platform',
     'protocol',
@@ -170,10 +198,11 @@ SUPPORTED_TOKENS = {
     'pan_destination_edl',
     'pan_source_edl',
     'translated'
-}
+})
 
 SUPPORTED_SUB_TOKENS = {
     'action': {'accept', 'deny', 'reject', 'count', 'log'},
+    'option': {'established', 'tcp-established'},
     'icmp_type': {
         'alternate-address',
         'certification-path-advertisement',
@@ -283,6 +312,21 @@ class PaloAltoFWTest(unittest.TestCase):
 
     output = str(paloaltofw.PaloAltoFW(pol, EXP_INFO))
     self.assertNotIn('good-term-stateless-reply', output, output)
+
+  def testSkipEstablished(self):
+    pol = policy.ParsePolicy(GOOD_HEADER_1 + TCP_ESTABLISHED_TERM, self.naming)
+    output = str(paloaltofw.PaloAltoFW(pol, EXP_INFO))
+    self.assertNotIn('tcp-established', output, output)
+    pol = policy.ParsePolicy(GOOD_HEADER_1 + UDP_ESTABLISHED_TERM, self.naming)
+    output = str(paloaltofw.PaloAltoFW(pol, EXP_INFO))
+    self.assertNotIn('udp-established-term', output, output)
+
+  def testUnsupportedOptions(self):
+    pol = policy.ParsePolicy(GOOD_HEADER_1 + UNSUPPORTED_OPTION_TERM,
+                             self.naming)
+    self.assertRaises(aclgenerator.UnsupportedFilterError,
+                      paloaltofw.PaloAltoFW,
+                      pol, EXP_INFO)
 
   def testBuildTokens(self):
     self.naming.GetServiceByProto.side_effect = [['25'], ['26']]
