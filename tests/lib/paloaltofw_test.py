@@ -145,6 +145,14 @@ term timeout-term {
   action:: accept
 }
 """
+LOG_SETTING_TERM_1 = """
+term log-setting-term-1 {
+  destination-address:: SOME_HOST
+  protocol:: tcp
+  pan-log-setting:: log-setting-name
+  action:: accept
+}
+"""
 
 SUPPORTED_TOKENS = {
     'action',
@@ -163,6 +171,7 @@ SUPPORTED_TOKENS = {
     'stateless_reply',
     'timeout',
     'pan_application',
+    'pan_log_setting',
     'translated'
 }
 
@@ -264,6 +273,11 @@ class PaloAltoFWTest(unittest.TestCase):
     pol = policy.ParsePolicy(GOOD_HEADER_1 + ICMP_ONLY_TERM_1, self.naming)
     output = str(paloaltofw.PaloAltoFW(pol, EXP_INFO))
     self.assertIn('<member>ping</member>', output, output)
+
+  def testLogSetting(self):
+    pol = policy.ParsePolicy(GOOD_HEADER_1 + LOG_SETTING_TERM_1, self.naming)
+    output = str(paloaltofw.PaloAltoFW(pol, EXP_INFO))
+    self.assertIn('<log-setting>log-setting-name</log-setting>', output, output)
 
   def testSkipStatelessReply(self):
     pol = policy.ParsePolicy(GOOD_HEADER_1 + GOOD_TERM_4_STATELESS_REPLY,

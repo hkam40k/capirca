@@ -171,6 +171,7 @@ class Rule(object):
     self.options["source"] = []
     self.options["destination"] = []
     self.options["application"] = []
+    self.options["log_setting"] = []
     self.options["service"] = []
     self.options["action"] = "allow"
 
@@ -202,6 +203,11 @@ class Rule(object):
     if term.pan_application:
       for pan_app in term.pan_application:
         self.options["application"].append(pan_app)
+
+    if term.pan_log_setting:
+      if len(term.pan_log_setting) > 1:
+        raise PaloAltoFWOptionError("Only one log-setting allowed")
+      self.options["log_setting"].append(term.pan_log_setting[0])
 
     if term.destination_port:
       ports = []
@@ -250,7 +256,6 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
     self.pafw_policies = []
     self.addressbook = collections.OrderedDict()
     self.applications = []
-    self.pan_applications = []
     self.ports = []
     self.from_zone = ""
     self.to_zone = ""
@@ -283,6 +288,7 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
         "stateless_reply",
         "timeout",
         "pan_application",
+        "pan_log_setting",
         "translated"
     }
 
@@ -602,6 +608,9 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
         for a in options["application"]:
           rules.append(self.INDENT * 10 + "<member>" + a + "</member>")
       rules.append(self.INDENT * 9 + "</application>")
+
+      if options["log_setting"]:
+        rules.append(self.INDENT * 9 + "<log-setting>" + options["log_setting"][0] + "</log-setting>")
 
       rules.append(self.INDENT * 8 + "</entry>")
 
