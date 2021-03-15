@@ -202,6 +202,7 @@ class Rule(object):
     self.options["destination"] = []
     self.options["application"] = []
     self.options["security_profile_group"] = []
+    self.options["log_setting"] = []
     self.options["service"] = []
     self.options["action"] = "allow"
 
@@ -251,6 +252,11 @@ class Rule(object):
       if len(term.pan_security_profile_group) > 1:
         raise PaloAltoFWOptionError("Only one security profile group allowed")
       self.options["security_profile_group"].append(term.pan_security_profile_group[0])
+
+    if term.pan_log_setting:
+      if len(term.pan_log_setting) > 1:
+        raise PaloAltoFWOptionError("Only one log-setting allowed")
+      self.options["log_setting"].append(term.pan_log_setting[0])
 
     src_ports = []
     if term.source_port:
@@ -343,6 +349,7 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
         "pan_security_profile_group",
         "pan_destination_edl",
         "pan_source_edl",
+        "pan_log_setting",
         "translated"
     }
 
@@ -715,6 +722,9 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
           rules.append(self.INDENT * 11 + "<member>" + p + "</member>")
         rules.append(self.INDENT * 10 + "</group>")
         rules.append(self.INDENT * 9 + "</profile-setting>")
+
+      if options["log_setting"]:
+        rules.append(self.INDENT * 9 + "<log-setting>" + options["log_setting"][0] + "</log-setting>")
 
       rules.append(self.INDENT * 8 + "</entry>")
 
