@@ -212,6 +212,14 @@ term timeout-term {
   action:: accept
 }
 """
+LOG_SETTING_TERM_1 = """
+term log-setting-term-1 {
+  destination-address:: SOME_HOST
+  protocol:: tcp
+  pan-log-setting:: log-setting-name
+  action:: accept
+}
+"""
 
 LOGGING_DISABLED = """
 term test-disabled-log {
@@ -389,6 +397,7 @@ SUPPORTED_TOKENS = frozenset({
     'pan_application',
     'pan_destination_edl',
     'pan_source_edl',
+    'pan_log_setting',
     'translated'
 })
 
@@ -546,6 +555,14 @@ class PaloAltoFWTest(unittest.TestCase):
       members.append(node.text)
 
     self.assertEqual(['icmp'], members, output)
+
+  def testLogSetting(self):
+    pol = policy.ParsePolicy(GOOD_HEADER_1 + LOG_SETTING_TERM_1, self.naming)
+    paloalto = paloaltofw.PaloAltoFW(pol, EXP_INFO)
+    output = str(paloalto)
+    x = paloalto.config.find(PATH_RULES +
+                             "/entry[@name='log-setting-term-1']/log-setting")
+    self.assertIsNotNone(x, output)
 
   def testSkipStatelessReply(self):
     pol = policy.ParsePolicy(GOOD_HEADER_1 + GOOD_TERM_4_STATELESS_REPLY,

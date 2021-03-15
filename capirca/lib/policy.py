@@ -336,6 +336,7 @@ class Term(object):
     pan-application: VarType.PAN_APPLICATION
     pan-destination-edl: VarType.PAN_DESTINATION_EDL
     pan-source-edl: VarType.PAN_SOURCE_EDL
+    pan-log-setting: VarType.PAN_LOG_SETTING
     policer: VarType.POLICER
     priority: VarType.PRIORITY
     vpn: VarType.VPN
@@ -435,6 +436,7 @@ class Term(object):
     self.pan_application = []
     self.pan_destination_edl= []
     self.pan_source_edl= []
+    self.pan_log_setting = []
     self.routing_instance = None
     self.source_address = []
     self.source_address_exclude = []
@@ -757,6 +759,8 @@ class Term(object):
       ret_str.append('  pan_destination_edl %s' % self.pan_destination_edl)
     if self.pan_source_edl:
       ret_str.append('  pan_source_edl %s' % self.pan_source_edl)
+    if self.pan_log_setting:
+      ret_str.append('  pan_log_setting: %s' % self.pan_log_setting)
     if self.logging:
       ret_str.append('  logging: %s' % self.logging)
     if self.log_limit:
@@ -854,6 +858,10 @@ class Term(object):
     if sorted(self.pan_source_edl) != sorted(other.pan_source_edl):
       return False
 
+    # pan-log-setting
+    if sorted(self.pan_log_setting) != sorted(other.pan_log_setting):
+      return False
+
     # verbatim
     if self.verbatim != other.verbatim:
       return False
@@ -888,6 +896,8 @@ class Term(object):
     if sorted(self.pan_destination_edl) != sorted(other.pan_destination_edl):
       return False
     if sorted(self.pan_source_edl) != sorted(other.pan_source_edl):
+      return False
+    if sorted(self.pan_log_setting) != sorted(other.pan_log_setting):
       return False
     if self.packet_length != other.packet_length:
       return False
@@ -1119,6 +1129,8 @@ class Term(object):
           self.pan_destination_edl.append(x.value)
         elif x.var_type is VarType.PAN_SOURCE_EDL:
           self.pan_source_edl.append(x.value)
+        elif x.var_type is VarType.PAN_LOG_SETTING:
+          self.pan_log_setting.append(x.value)
         elif x.var_type is VarType.NEXT_IP:
           self.next_ip = DEFINITIONS.GetNetAddr(x.value)
         elif x.var_type is VarType.PLATFORM:
@@ -1167,6 +1179,8 @@ class Term(object):
         self.pan_destination_edl.append(obj.value)
       elif obj.var_type is VarType.PAN_SOURCE_EDL:
         self.pan_source_edl.append(obj.value)
+      elif obj.var_type is VarType.PAN_LOG_SETTING:
+        self.pan_log_setting.append(obj.value)
       elif obj.var_type is VarType.NEXT_IP:
         self.next_ip = DEFINITIONS.GetNetAddr(obj.value)
       elif obj.var_type is VarType.VERBATIM:
@@ -1530,6 +1544,7 @@ class VarType(object):
   ENCAPSULATE = 61
   PAN_DESTINATION_EDL = 63
   PAN_SOURCE_EDL = 64
+  PAN_LOG_SETTING = 65
 
   def __init__(self, var_type, value):
     self.var_type = var_type
@@ -1742,6 +1757,7 @@ tokens = (
     'PAN_APPLICATION',
     'PAN_DESTINATION_EDL',
     'PAN_SOURCE_EDL',
+    'PAN_LOG_SETTING',
     'ROUTING_INSTANCE',
     'SADDR',
     'SADDREXCLUDE',
@@ -1820,6 +1836,7 @@ reserved = {
     'pan-application': 'PAN_APPLICATION',
     'pan-destination-edl': 'PAN_DESTINATION_EDL',
     'pan-source-edl': 'PAN_SOURCE_EDL',
+    'pan-log-setting': 'PAN_LOG_SETTING',
     'routing-instance': 'ROUTING_INSTANCE',
     'source-address': 'SADDR',
     'source-exclude': 'SADDREXCLUDE',
@@ -1999,6 +2016,7 @@ def p_term_spec(p):
                 | term_spec pan_application_spec
                 | term_spec pan_destination_edl_spec
                 | term_spec pan_source_edl_spec
+                | term_spec pan_log_setting_spec
                 | term_spec routinginstance_spec
                 | term_spec tag_list_spec
                 | term_spec target_resources_spec
@@ -2380,6 +2398,13 @@ def p_pan_source_edl_spec(p):
   p[0] = []
   for apps in p[4]:
     p[0].append(VarType(VarType.PAN_SOURCE_EDL, apps))
+
+
+def p_pan_log_setting_spec(p):
+  """ pan_log_setting_spec : PAN_LOG_SETTING ':' ':' one_or_more_strings """
+  p[0] = []
+  for apps in p[4]:
+    p[0].append(VarType(VarType.PAN_LOG_SETTING, apps))
 
 
 def p_interface_spec(p):

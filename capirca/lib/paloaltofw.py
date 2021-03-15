@@ -204,6 +204,7 @@ class Rule(object):
     self.options["source"] = []
     self.options["destination"] = []
     self.options["application"] = []
+    self.options["log_setting"] = []
     self.options["service"] = []
     self.options["logging"] = []
 
@@ -275,6 +276,11 @@ class Rule(object):
     if term.pan_application:
       for pan_app in term.pan_application:
         self.options["application"].append(pan_app)
+
+    if term.pan_log_setting:
+      if len(term.pan_log_setting) > 1:
+        raise PaloAltoFWOptionError("Only one log-setting allowed")
+      self.options["log_setting"].append(term.pan_log_setting[0])
 
     if term.source_port or term.destination_port:
       src_ports = pan_ports(term.source_port)
@@ -389,6 +395,7 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
         "pan_application",
         "pan_destination_edl",
         "pan_source_edl",
+        "pan_log_setting",
         "translated"
     }
 
@@ -1007,6 +1014,11 @@ class PaloAltoFW(aclgenerator.ACLGenerator):
           if "log-end" in options["logging"]:
             log = etree.SubElement(entry, "log-end")
             log.text = "yes"
+
+        # LOG-SETTING
+        if options["log_setting"]:
+          log_setting = etree.SubElement(entry, "log-setting")
+          log_setting.text = options["log_setting"][0]
 
     # pytype: enable=key-error
 
