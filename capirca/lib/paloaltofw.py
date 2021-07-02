@@ -151,26 +151,20 @@ class ServiceMap(object):
   def __init__(self):
     self.entries = {}
 
-  def get_service_name(self, term_name, src_ports, ports, protocol, prefix=None):
+  def get_service_name(self, term_name, src_ports, dst_ports, protocol):
     """Returns service name based on the provided ports and protocol."""
-    if (src_ports, ports, protocol) in self.entries:
-      return self.entries[(src_ports, ports, protocol)]["name"]
+    if (src_ports, dst_ports, protocol) in self.entries:
+      return self.entries[(src_ports, dst_ports, protocol)]["name"]
 
-    if prefix is None:
-      prefix = "service-"
-    service_name = "%s%s-%s" % (prefix, term_name, protocol)
+    src_p = "SVC_%s" % "_".join(src_ports) if src_ports and '0-65535' not in src_ports else "ANY"
+    dst_p = "SVC_%s" % "_".join(dst_ports) if dst_ports and '0-65535' not in dst_ports else "ANY"
+    service_name = "%s_TO_%s_%s" % (src_p, dst_p, protocol.upper())
 
     if len(service_name) > 63:
       raise PaloAltoFWNameTooLongError(
           "Service name must be 63 characters max: %s" % service_name)
 
-    for _, service in self.entries.items():
-      if service["name"] == service_name:
-        raise PaloAltoFWDuplicateServiceError(
-            "You have a duplicate service. A service named %s already exists." %
-            service_name)
-
-    self.entries[(src_ports, ports, protocol)] = {"name": service_name}
+    self.entries[(src_ports, dst_ports, protocol)] = {"name": service_name}
     return service_name
 
 
@@ -312,8 +306,7 @@ class Rule(object):
             self.options["to_zone"][0], p, p)
           continue
         ports = pan_ports([("0", "65535")])
-        # use prefix "" to avoid service name clash with term named "any"
-        service_name = service_map.get_service_name("any", (), ports, p, "")
+        service_name = service_map.get_service_name("any", (), ports, p)
         if service_name not in self.options["service"]:
           self.options["service"].append(service_name)
 

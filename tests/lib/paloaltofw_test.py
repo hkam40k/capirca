@@ -504,10 +504,10 @@ class PaloAltoFWTest(unittest.TestCase):
     self.assertEqual(
         pol1.service_map.entries, {
             ((), ('22',), 'tcp'): {
-                'name': 'service-ssh-term-1-tcp'
+                'name': 'ANY_TO_SVC_22_TCP'
             },
             ((), ('25',), 'tcp'): {
-                'name': 'service-smtp-term-1-tcp'
+                'name': 'ANY_TO_SVC_25_TCP'
             }
         }, pol1.service_map.entries)
 
@@ -517,7 +517,7 @@ class PaloAltoFWTest(unittest.TestCase):
     self.assertEqual(
         pol2.service_map.entries, {
             ((), ('25',), 'tcp'): {
-                'name': 'service-smtp-term-1-tcp'
+                'name': 'ANY_TO_SVC_25_TCP'
             }
         }, pol2.service_map.entries)
 
@@ -954,7 +954,7 @@ term rule-1 {
     pol = policy.ParsePolicy(POL % T, definitions)
     paloalto = paloaltofw.PaloAltoFW(pol, EXP_INFO)
     output = str(paloalto)
-    name = "service-rule-1-udp"
+    name = "ANY_TO_SVC_123_UDP"
     path = "/entry[@name='%s']/protocol/udp/port" % name
     x = paloalto.config.findtext(PATH_SERVICE + path)
     self.assertEqual(x, "123", output)
@@ -970,7 +970,7 @@ term rule-1 {
     pol = policy.ParsePolicy(POL % T, definitions)
     paloalto = paloaltofw.PaloAltoFW(pol, EXP_INFO)
     output = str(paloalto)
-    name = "service-rule-1-udp"
+    name = "SVC_123_TO_ANY_UDP"
     path = "/entry[@name='%s']/protocol/udp/port" % name
     x = paloalto.config.findtext(PATH_SERVICE + path)
     self.assertEqual(x, "0-65535", output)
@@ -987,7 +987,7 @@ term rule-1 {
     pol = policy.ParsePolicy(POL % T, definitions)
     paloalto = paloaltofw.PaloAltoFW(pol, EXP_INFO)
     output = str(paloalto)
-    name = "service-rule-1-tcp"
+    name = "SVC_123_TO_SVC_53_123_TCP"
     path = "/entry[@name='%s']/protocol/tcp/port" % name
     x = paloalto.config.findtext(PATH_SERVICE + path)
     self.assertEqual(x, "53,123", output)
@@ -1002,7 +1002,7 @@ term rule-1 {
     pol = policy.ParsePolicy(POL % T, definitions)
     paloalto = paloaltofw.PaloAltoFW(pol, EXP_INFO)
     output = str(paloalto)
-    name = "any-tcp"
+    name = "ANY_TO_ANY_TCP"
     path = "/entry[@name='%s']/protocol/tcp/port" % name
     x = paloalto.config.findtext(PATH_SERVICE + path)
     self.assertEqual(x, "0-65535", output)
@@ -1017,18 +1017,18 @@ term rule-1 {
     pol = policy.ParsePolicy(POL % T, definitions)
     paloalto = paloaltofw.PaloAltoFW(pol, EXP_INFO)
     output = str(paloalto)
-    name = "any-tcp"
+    name = "ANY_TO_ANY_TCP"
     path = "/entry[@name='%s']/protocol/tcp/port" % name
     x = paloalto.config.findtext(PATH_SERVICE + path)
     self.assertEqual(x, "0-65535", output)
-    name = "any-udp"
+    name = "ANY_TO_ANY_UDP"
     path = "/entry[@name='%s']/protocol/udp/port" % name
     x = paloalto.config.findtext(PATH_SERVICE + path)
     self.assertEqual(x, "0-65535", output)
     x = paloalto.config.findall(PATH_RULES +
                                 "/entry[@name='rule-1']/service/member")
     services = {elem.text for elem in x}
-    self.assertEqual({"any-tcp", "any-udp"}, services, output)
+    self.assertEqual({"ANY_TO_ANY_TCP", "ANY_TO_ANY_UDP"}, services, output)
 
 
 if __name__ == '__main__':
